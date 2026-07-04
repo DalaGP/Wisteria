@@ -540,7 +540,7 @@ window.saveModule=function(){
   }
   scheduleSave(tv);closeModal();if(tv===view)render();
 };
-
+ 
 window.deleteModule=function(){
   if(!editingId||!editingId.startsWith('custom_'))return;
   state[view].customs=state[view].customs.filter(m=>m.id!==editingId);
