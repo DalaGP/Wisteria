@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Wisteria — Caravane des Mogs</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-int:#2a1a0a;--bg-ext:#1a1a2e;
+  --surface-int:#3d2510;--surface-ext:#16213e;
+  --surface2-int:#4a2e14;--surface2-ext:#0f3460;
+  --border-int:#6b3d1a;--border-ext:#2a2a4a;
+  --border2-int:#8b5a2a;--border2-ext:#3a3a6a;
+  --cell-int:#3a2208;--cell-ext:#12122a;
+  --text:#e8e8f0;--text2:#9999bb;--text3:#5555aa;
+  --accent:#7f77dd;--accent2:#534ab7;
+  --green:#1d9e75;--green2:#0f6e56;
+  --radius:8px;--cell:54px;--gap:3px;
+}
+body{background:var(--bg-ext);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;transition:background 0.3s}
+body.int-mode{background:var(--bg-int)}
+h1{font-size:20px;font-weight:600;color:var(--accent);letter-spacing:0.5px}
+.subtitle{font-size:12px;color:var(--text2);margin-top:2px}
+header{padding:16px 20px;border-bottom:1px solid var(--border-ext);display:flex;align-items:center;justify-content:space-between;background:var(--bg-ext)}
+.sync-status{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sync-dot.syncing{background:#ef9f27;animation:pulse 1s infinite}
+.sync-dot.error{background:#e24b4a}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.tabs{display:flex;gap:6px;padding:14px 20px 0;background:var(--bg-ext)}
+.tab{padding:7px 18px;border:1px solid var(--border2-ext);border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;font-size:13px;color:var(--text2);background:var(--surface-ext);transition:all 0.15s}
+.tab.active.int{background:var(--surface2-int);color:var(--accent);border-color:var(--border2-int)}
+.tab.active.ext{background:var(--surface2-ext);color:var(--accent);border-color:var(--accent2)}
+.layout{display:grid;grid-template-columns:1fr 270px;height:calc(100vh - 110px)}
+.grid-area{padding:16px 20px;overflow:auto;transition:background 0.3s}
+.grid-area.int{background:var(--surface2-int)}
+.grid-area.ext{background:var(--surface2-ext)}
+.grid-title{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;opacity:0.7}
+.grid{display:inline-grid;gap:var(--gap);position:relative;user-select:none}
+.cell{width:var(--cell);height:var(--cell);border-radius:4px;transition:background 0.1s,border-color 0.1s}
+.cell.int-cell{background:var(--cell-int);border:1px solid var(--border-int)}
+.cell.ext-cell{background:var(--cell-ext);border:1px solid var(--border-ext)}
+.cell.body-cell{background:#3d251099;border:1px solid #6b3d1a55;cursor:not-allowed}
+.cell.hl{background:#1d9e7533!important;border-color:var(--green)!important}
+.cell.bl{background:#e24b4a22!important;border-color:#e24b4a77!important}
+.body-frame{position:absolute;pointer-events:none;border:2px dashed #8b5a2a99;border-radius:6px;background:#4a2e1408;z-index:1}
+.body-label{position:absolute;font-size:9px;color:#8b5a2aaa;text-transform:uppercase;letter-spacing:1px;pointer-events:none;z-index:2}
+.module{position:absolute;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;border:1.5px solid transparent;gap:3px;transition:opacity 0.12s;z-index:3}
+.module:hover{opacity:0.88}
+.module.dragging{opacity:0.4;cursor:grabbing}
+.module.sel{border-color:var(--accent)!important;box-shadow:0 0 0 2px #7f77dd44}
+.m-icon{font-size:22px;line-height:1}
+.m-name{font-size:9px;font-weight:600;text-align:center;line-height:1.2;padding:0 3px;text-shadow:0 1px 2px rgba(0,0,0,0.6)}
+.sidebar{display:flex;flex-direction:column;overflow:hidden;border-left:1px solid var(--border2-ext);border-top:1px solid var(--border2-ext);transition:background 0.3s}
+.sidebar.int{background:var(--surface-int)}
+.sidebar.ext{background:var(--surface-ext)}
+.sb-section{padding:14px;border-bottom:1px solid var(--border-ext)}
+.sb-section.int-s{border-bottom-color:var(--border-int)}
+.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sb-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.edit-btn{padding:3px 8px;font-size:10px;border:1px solid var(--border2-ext);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--text2);transition:all 0.1s}
+.edit-btn:hover{color:var(--accent);border-color:var(--accent2)}
+.palette{display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
+.palette::-webkit-scrollbar{width:4px}
+.palette::-webkit-scrollbar-thumb{background:var(--border2-ext);border-radius:2px}
+.pitem{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border-ext);border-radius:var(--radius);cursor:grab;transition:all 0.12s}
+.pitem.int-p{background:var(--cell-int);border-color:var(--border-int)}
+.pitem.ext-p{background:#12122a}
+.pitem.placed{opacity:0.4;cursor:default}
+.p-icon{width:30px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.p-info{flex:1;min-width:0}
+.p-name{font-size:12px;font-weight:500;color:var(--text)}
+.p-size{font-size:10px;color:var(--text2)}
+.p-btns{display:flex;gap:3px}
+.rot-btn,.mod-btn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2-ext);border-radius:4px;cursor:pointer;background:transparent;color:var(--text2);font-size:12px;flex-shrink:0;transition:all 0.1s}
+.rot-btn:hover{color:var(--accent)}
+.mod-btn:hover{color:#ef9f27}
+.panel{flex:1;padding:14px;overflow-y:auto}
+.panel-empty{font-size:12px;color:var(--text3);font-style:italic;margin-top:4px}
+.panel h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.panel-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px}
+.panel textarea{width:100%;min-height:80px;border-radius:var(--radius);padding:8px;color:var(--text);font-size:12px;font-family:inherit;resize:vertical}
+.panel textarea.int-ta{background:var(--cell-int);border:1px solid var(--border-int)}
+.panel textarea.ext-ta{background:#12122a;border:1px solid var(--border2-ext)}
+.panel textarea:focus{outline:none;border-color:var(--accent2)}
+.btn-row{display:flex;gap:6px;margin-top:8px}
+.btn{padding:5px 12px;font-size:11px;border-radius:var(--radius);cursor:pointer;transition:all 0.12s;border:1px solid}
+.btn-save{background:var(--green2);border-color:var(--green);color:#fff}
+.btn-save:hover{background:var(--green)}
+.btn-del{background:transparent;border-color:#a32d2d;color:#e24b4a}
+.btn-del:hover{background:#a32d2d22}
+.save-ok{font-size:10px;color:var(--green);margin-top:5px;min-height:14px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:#1e1e3a;border:1px solid var(--border2-ext);border-radius:12px;padding:20px;width:340px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:15px;font-weight:600;color:var(--accent);margin-bottom:14px}
+.form-row{margin-bottom:10px}
+.form-row label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:#12122a;border:1px solid var(--border2-ext);border-radius:var(--radius);padding:7px 9px;color:var(--text);font-size:12px;font-family:inherit}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent2)}
+.shape-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:4px}
+.shape-cell{width:100%;aspect-ratio:1;border:1px solid var(--border2-ext);border-radius:3px;cursor:pointer;background:#12122a;transition:all 0.1s}
+.shape-cell.active{background:var(--accent);border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;margin-top:14px}
+.btn-primary{flex:1;padding:7px;background:var(--accent2);border:none;border-radius:var(--radius);color:#fff;font-size:12px;cursor:pointer}
+.btn-primary:hover{background:var(--accent)}
+.btn-secondary{flex:1;padding:7px;background:transparent;border:1px solid var(--border2-ext);border-radius:var(--radius);color:var(--text2);font-size:12px;cursor:pointer}
+.btn-danger-sm{padding:5px 10px;background:transparent;border:1px solid #a32d2d;border-radius:var(--radius);color:#e24b4a;font-size:11px;cursor:pointer;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>La Wisteria</h1>
+    <div class="subtitle">Caravane des Mogs — Agencement des modules</div>
+  </div>
+  <div class="sync-status">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Connexion…</span>
+  </div>
+</header>
+<div class="tabs">
+  <button class="tab" id="tab-int" onclick="switchView('interior')">Intérieur</button>
+  <button class="tab active ext" id="tab-ext" onclick="switchView('exterior')">Extérieur</button>
+</div>
+<div class="layout">
+  <div class="grid-area ext" id="grid-area">
+    <div class="grid-title" id="grid-title">Extérieur — 11 × 7</div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="sidebar ext" id="sidebar">
+    <div class="sb-section" id="sb-top-sec">
+      <div class="sb-top">
+        <div class="sb-title">Modules</div>
+        <button class="edit-btn" onclick="openAddModal()">+ Nouveau</button>
+      </div>
+      <div class="palette" id="palette"></div>
+    </div>
+    <div class="panel" id="panel">
+      <div class="panel-empty">Cliquez sur un module placé pour voir ses détails.</div>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="modal" style="display:none">
+  <div class="modal">
+    <h2 id="modal-title">Nouveau module</h2>
+    <div class="form-row"><label>Nom</label><input id="f-name" type="text" placeholder="Ex : Coffre à outils"></div>
+    <div class="form-row"><label>Icône (emoji)</label><input id="f-icon" type="text" placeholder="🔧" maxlength="4" style="font-size:20px;text-align:center"></div>
+    <div class="form-row"><label>Couleur</label><input id="f-color" type="color" value="#7f77dd" style="height:36px;cursor:pointer"></div>
+    <div class="form-row"><label>Onglet</label><select id="f-view"><option value="interior">Intérieur</option><option value="exterior">Extérieur</option></select></div>
+    <div class="form-row"><label>Description</label><textarea id="f-desc" rows="2" placeholder="Description du module…"></textarea></div>
+    <div class="form-row">
+      <label>Forme (cliquez pour activer/désactiver — max 6 cases)</label>
+      <div class="shape-grid" id="shape-grid"></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px" id="shape-info">0 case sélectionnée</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveModule()">Enregistrer</button>
+    </div>
+    <button class="btn-danger-sm" id="del-mod-btn" onclick="deleteModule()" style="display:none">Supprimer ce module</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANvtphu19o-dhNN9c_-d7LGlvBjVvPLSs",
+  authDomain: "wisteria-760a8.firebaseapp.com",
+  databaseURL: "https://wisteria-760a8-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "wisteria-760a8",
+  storageBucket: "wisteria-760a8.firebasestorage.app",
+  messagingSenderId: "887912630314",
+  appId: "1:887912630314:web:78ff0b6d4234c6b66a1b53"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dbRef = ref(db, 'wisteria');
+
+const GRIDS={interior:{cols:9,rows:5},exterior:{cols:11,rows:7}};
+const BODY_OFFSET={col:1,row:1};
+const BODY_SIZE={cols:9,rows:5};
+const CELL=54,GAP=3;
+
+const DEFAULT_MODS = {
+  interior:[
+    {id:'cosy',    name:'Coin cosy',           icon:'🛋️', color:'#7f77dd', cells:[[0,0],[1,0],[2,0],[1,1]], desc:'Espace de repos. Coussins, couvertures, cheminée.'},
+    {id:'atelier', name:'Atelier',              icon:'🧵', color:'#1d9e75', cells:[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]], desc:'Couture, décoration, petites réparations.'},
+    {id:'biblio',  name:'Bibliothèque',         icon:'📚', color:'#d85a30', cells:[[0,0],[1,0],[0,1],[1,1]], desc:'Archives, cartes, parchemins.'},
+    {id:'cuisine', name:'Cuisine',              icon:'🍲', color:'#d4537e', cells:[[0,0],[1,0],[0,1],[1,1]], desc:'Fourneaux, épices, odeurs du monde.'},
+    {id:'reserve', name:'Réserve',              icon:'📦', color:'#888780', cells:[[0,0],[1,0],[2,0]], desc:'Provisions, tissus, objets divers.'},
+    {id:'forge',   name:'Forge & Alambic',      icon:'⚗️', color:'#ba7517', cells:[[0,0],[1,0],[2,0],[0,1],[2,1]], desc:'Forge rudimentaire et alambic.'},
+    {id:'portrait',name:"Portrait d'Alphinaud", icon:'🖼️', color:'#5f5e5a', cells:[[0,0]], desc:"Un portrait encadré d'Alphinaud Leveilleur."},
+    {id:'tonneau', name:'Tonneau',              icon:'🍺', color:'#3b6d11', cells:[[0,0]], desc:'Le tonneau du Chant de la Mer.'},
+  ],
+  exterior:[
+    {id:'jard1',   name:'Jardinière A',         icon:'🌿', color:'#1d9e75', cells:[[0,0],[1,0]], desc:'Herbes aromatiques et plantes médicinales.'},
+    {id:'jard2',   name:'Jardinière B',         icon:'🌸', color:'#1d9e75', cells:[[0,0],[1,0]], desc:'Fleurs colorées.'},
+    {id:'jard3',   name:'Jardinière C',         icon:'🌱', color:'#1d9e75', cells:[[0,0],[1,0]], desc:'Jeunes pousses et plantes rares.'},
+    {id:'reserv',  name:'Réservoir',            icon:'💧', color:'#378add', cells:[[0,0],[1,0],[0,1],[1,1]], desc:"Réservoir d'eau."},
+    {id:'ruche',   name:'Ruche',                icon:'🐝', color:'#ef9f27', cells:[[0,0],[1,0],[0,1],[1,1]], desc:'Miel, cire, et bourdonnement apaisant.'},
+    {id:'drapeau', name:'Drapeau',              icon:'🚩', color:'#534ab7', cells:[[0,0]], desc:'Le drapeau de la Wisteria.'},
+    {id:'lanterne',name:'Lanterne',             icon:'🏮', color:'#d85a30', cells:[[0,0]], desc:'Lanterne sylphe.'},
+    {id:'plante',  name:'Plante grimpante',     icon:'🌺', color:'#d4537e', cells:[[0,0],[0,1],[0,2]], desc:'Plante grimpante aux fleurs bleues.'},
+    {id:'mojito',  name:'Pied de Mojito',       icon:'🍃', color:'#639922', cells:[[0,0],[1,0]], desc:'Un pied de menthe pour les mojitos.'},
+    {id:'cheminee',name:'Cheminée',             icon:'🏠', color:'#888780', cells:[[0,0]], desc:'Cheminée arrière.'},
+  ]
+};
+
+let view='exterior';
+let modules=JSON.parse(JSON.stringify(DEFAULT_MODS));
+let placements={interior:{},exterior:{}};
+let notes={interior:{},exterior:{}};
+let rotations={};
+let sel=null;
+let drag=null;
+let saveTimer=null;
+let editingId=null;
+let shapeSelected=new Set();
+let remoteUpdate=false;
+
+function setSyncStatus(s){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  dot.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
+  lbl.textContent=s==='ok'?'Synchronisé':s==='syncing'?'Enregistrement…':s==='error'?'Erreur de connexion':'Connexion…';
+}
+
+onValue(dbRef, (snapshot)=>{
+  const data=snapshot.val();
+  if(data){
+    remoteUpdate=true;
+    if(data.placements)placements=data.placements;
+    if(data.notes)notes=data.notes;
+    if(data.rotations)rotations=data.rotations;
+    if(data.modules)modules=data.modules;
+    remoteUpdate=false;
+    render();
+    const panelId=sel;
+    if(panelId)renderPanel(panelId);
+  }
+  setSyncStatus('ok');
+},{onlyOnce:false});
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    setSyncStatus('syncing');
+    set(dbRef,{placements,notes,rotations,modules})
+      .then(()=>setSyncStatus('ok'))
+      .catch(()=>setSyncStatus('error'));
+  },800);
+}
+
+function cells(mod,rot){
+  let c=mod.cells.map(x=>[...x]);
+  const r=(rot||0)%4;
+  for(let i=0;i<r;i++){
+    c=c.map(([x,y])=>[-y,x]);
+    const mx=Math.min(...c.map(v=>v[0]));
+    const my=Math.min(...c.map(v=>v[1]));
+    c=c.map(([x,y])=>[x-mx,y-my]);
+  }
+  return c;
+}
+
+function isBodyCell(r,c){
+  if(view!=='exterior')return false;
+  return r>=BODY_OFFSET.row&&r<BODY_OFFSET.row+BODY_SIZE.rows&&
+         c>=BODY_OFFSET.col&&c<BODY_OFFSET.col+BODY_SIZE.cols;
+}
+
+function canPlace(id,r,c,rot){
+  const{cols,rows}=GRIDS[view];
+  const mod=modules[view].find(m=>m.id===id);
+  if(!mod)return false;
+  const cs=cells(mod,rot);
+  const pl=placements[view];
+  for(const[dc,dr]of cs){
+    const nr=r+dr,nc=c+dc;
+    if(nr<0||nr>=rows||nc<0||nc>=cols)return false;
+    if(isBodyCell(nr,nc))return false;
+    for(const[pid,pos]of Object.entries(pl)){
+      if(pid===id)continue;
+      const om=modules[view].find(m=>m.id===pid);
+      if(!om)continue;
+      const oc=cells(om,rotations[view+'_'+pid]||0);
+      for(const[odc,odr]of oc){
+        if(pos.r+odr===nr&&pos.c+odc===nc)return false;
+      }
+    }
+  }
+  return true;
+}
+
+window.switchView=function(v){
+  view=v;sel=null;
+  const isInt=v==='interior';
+  document.body.className=isInt?'int-mode':'';
+  document.getElementById('tab-int').className='tab'+(isInt?' active int':'');
+  document.getElementById('tab-ext').className='tab'+(isInt?'':' active ext');
+  document.getElementById('grid-area').className='grid-area '+(isInt?'int':'ext');
+  document.getElementById('sidebar').className='sidebar '+(isInt?'int':'ext');
+  document.getElementById('sb-top-sec').className='sb-section '+(isInt?'int-s':'');
+  const{cols,rows}=GRIDS[v];
+  document.getElementById('grid-title').textContent=isInt?`Intérieur — ${cols} × ${rows}`:`Extérieur — ${cols} × ${rows}`;
+  document.getElementById('f-view').value=v;
+  render();renderPanel(null);
+};
+
+function render(){
+  const{cols,rows}=GRIDS[view];
+  const isInt=view==='interior';
+  const grid=document.getElementById('grid');
+  grid.style.gridTemplateColumns=`repeat(${cols},${CELL}px)`;
+  grid.style.width=`${cols*(CELL+GAP)-GAP}px`;
+  grid.style.height=`${rows*(CELL+GAP)-GAP}px`;
+  grid.innerHTML='';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const el=document.createElement('div');
+    const body=isBodyCell(r,c);
+    el.className='cell '+(body?'body-cell':isInt?'int-cell':'ext-cell');
+    el.dataset.r=r;el.dataset.c=c;
+    if(!body){
+      el.addEventListener('dragover',onOver);
+      el.addEventListener('drop',onDrop);
+      el.addEventListener('dragleave',clearHL);
+    }
+    grid.appendChild(el);
+  }
+  if(!isInt){
+    const frame=document.createElement('div');
+    frame.className='body-frame';
+    frame.style.cssText=`left:${BODY_OFFSET.col*(CELL+GAP)}px;top:${BODY_OFFSET.row*(CELL+GAP)}px;width:${BODY_SIZE.cols*(CELL+GAP)-GAP}px;height:${BODY_SIZE.rows*(CELL+GAP)-GAP}px`;
+    grid.appendChild(frame);
+    const lbl=document.createElement('div');
+    lbl.className='body-label';
+    lbl.textContent='Structure de la caravane';
+    lbl.style.cssText=`left:${BODY_OFFSET.col*(CELL+GAP)+8}px;top:${BODY_OFFSET.row*(CELL+GAP)+5}px`;
+    grid.appendChild(lbl);
+  }
+  const pl=placements[view];
+  Object.entries(pl).forEach(([pid,pos])=>{
+    const mod=modules[view].find(m=>m.id===pid);
+    if(!mod)return;
+    const rot=rotations[view+'_'+pid]||0;
+    const cs=cells(mod,rot);
+    const maxC=Math.max(...cs.map(c=>c[0]));
+    const maxR=Math.max(...cs.map(c=>c[1]));
+    const el=document.createElement('div');
+    el.className='module'+(pid===sel?' sel':'');
+    el.style.cssText=`background:${mod.color}28;left:${pos.c*(CELL+GAP)}px;top:${pos.r*(CELL+GAP)}px;width:${(maxC+1)*(CELL+GAP)-GAP}px;height:${(maxR+1)*(CELL+GAP)-GAP}px;border-color:${mod.color}66`;
+    el.innerHTML=`<div class="m-icon">${mod.icon}</div><div class="m-name" style="color:${mod.color}">${mod.name}</div>`;
+    el.draggable=true;
+    el.addEventListener('click',e=>{e.stopPropagation();sel=pid;render();renderPanel(pid);});
+    el.addEventListener('dragstart',e=>{drag={id:pid};el.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+    grid.appendChild(el);
+    cs.forEach(([dc,dr])=>{
+      const idx=(pos.r+dr)*cols+(pos.c+dc);
+      const cellEl=grid.children[idx];
+      if(cellEl&&cellEl.classList.contains('cell')){cellEl.style.background=mod.color+'18';cellEl.style.borderColor=mod.color+'44';}
+    });
+  });
+  grid.addEventListener('click',()=>{sel=null;render();renderPanel(null);});
+  renderPalette();
+}
+
+function renderPalette(){
+  const pal=document.getElementById('palette');
+  pal.innerHTML='';
+  const isInt=view==='interior';
+  const pl=placements[view];
+  modules[view].forEach(mod=>{
+    const placed=!!pl[mod.id];
+    const item=document.createElement('div');
+    item.className='pitem '+(placed?'placed':'')+(isInt?' int-p':' ext-p');
+    item.draggable=!placed;
+    if(!placed)item.addEventListener('dragstart',e=>{drag={id:mod.id};e.dataTransfer.effectAllowed='move';});
+    const rot=rotations[view+'_'+mod.id]||0;
+    const cs=cells(mod,rot);
+    const w=Math.max(...cs.map(c=>c[0]))+1,h=Math.max(...cs.map(c=>c[1]))+1;
+    item.innerHTML=`
+      <div class="p-icon" style="background:${mod.color}28">${mod.icon}</div>
+      <div class="p-info"><div class="p-name">${mod.name}${placed?' ✓':''}</div><div class="p-size">${w}×${h} · ${cs.length} case${cs.length>1?'s':''}</div></div>
+      <div class="p-btns">
+        <div class="rot-btn" title="Pivoter" data-id="${mod.id}">↻</div>
+        <div class="mod-btn" title="Modifier" data-id="${mod.id}">✎</div>
+      </div>`;
+    item.querySelector('.rot-btn').addEventListener('click',e=>{e.stopPropagation();rotations[view+'_'+mod.id]=((rotations[view+'_'+mod.id]||0)+1)%4;scheduleSave();render();});
+    item.querySelector('.mod-btn').addEventListener('click',e=>{e.stopPropagation();openEditModal(mod.id);});
+    pal.appendChild(item);
+  });
+}
+
+function onOver(e){
+  e.preventDefault();if(!drag)return;clearHL();
+  const r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+  const{cols,rows}=GRIDS[view];
+  const mod=modules[view].find(m=>m.id===drag.id);if(!mod)return;
+  const rot=rotations[view+'_'+drag.id]||0;
+  const cs=cells(mod,rot);const ok=canPlace(drag.id,r,c,rot);
+  const grid=document.getElementById('grid');
+  cs.forEach(([dc,dr])=>{const nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols){const el=grid.children[nr*cols+nc];if(el&&el.classList.contains('cell'))el.classList.add(ok?'hl':'bl');}});
+}
+
+function onDrop(e){
+  e.preventDefault();clearHL();if(!drag)return;
+  const r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+  const rot=rotations[view+'_'+drag.id]||0;
+  if(canPlace(drag.id,r,c,rot)){placements[view][drag.id]={r,c};scheduleSave();render();if(drag.id===sel)renderPanel(drag.id);}
+  drag=null;
+}
+
+function clearHL(){document.querySelectorAll('.cell.hl,.cell.bl').forEach(el=>el.classList.remove('hl','bl'));}
+
+function renderPanel(id){
+  const panel=document.getElementById('panel');
+  const isInt=view==='interior';
+  if(!id){panel.innerHTML='<div class="panel-empty">Cliquez sur un module placé pour voir ses détails.</div>';return;}
+  const mod=modules[view].find(m=>m.id===id);if(!mod)return;
+  const note=notes[view][id]||'';
+  panel.innerHTML=`
+    <h3>${mod.icon} ${mod.name}</h3>
+    <p class="panel-desc">${mod.desc}</p>
+    <textarea id="note-ta" class="${isInt?'int-ta':'ext-ta'}" placeholder="Notes de session…">${note}</textarea>
+    <div class="btn-row">
+      <button class="btn btn-save" onclick="saveNote('${id}')">Sauvegarder</button>
+      <button class="btn btn-del" onclick="removeModule('${id}')">Retirer</button>
+    </div>
+    <div class="save-ok" id="save-ok"></div>`;
+}
+
+window.saveNote=function(id){
+  const ta=document.getElementById('note-ta');if(!ta)return;
+  notes[view][id]=ta.value;scheduleSave();
+  const ok=document.getElementById('save-ok');
+  if(ok){ok.textContent='Sauvegardé ✓';setTimeout(()=>ok.textContent='',2000);}
+};
+
+window.removeModule=function(id){delete placements[view][id];sel=null;scheduleSave();render();renderPanel(null);};
+
+function buildShapeGrid(){
+  const sg=document.getElementById('shape-grid');sg.innerHTML='';
+  for(let r=0;r<3;r++)for(let c=0;c<4;c++){
+    const key=`${c},${r}`;
+    const cell=document.createElement('div');
+    cell.className='shape-cell'+(shapeSelected.has(key)?' active':'');
+    cell.addEventListener('click',()=>{
+      if(shapeSelected.has(key))shapeSelected.delete(key);
+      else if(shapeSelected.size<6)shapeSelected.add(key);
+      buildShapeGrid();
+      document.getElementById('shape-info').textContent=`${shapeSelected.size} case${shapeSelected.size>1?'s':''} sélectionnée${shapeSelected.size>1?'s':''}`;
+    });
+    sg.appendChild(cell);
+  }
+}
+
+window.openAddModal=function(){
+  editingId=null;shapeSelected=new Set(['0,0']);
+  document.getElementById('modal-title').textContent='Nouveau module';
+  document.getElementById('f-name').value='';
+  document.getElementById('f-icon').value='📦';
+  document.getElementById('f-color').value='#7f77dd';
+  document.getElementById('f-view').value=view;
+  document.getElementById('f-desc').value='';
+  document.getElementById('del-mod-btn').style.display='none';
+  buildShapeGrid();
+  document.getElementById('shape-info').textContent='1 case sélectionnée';
+  document.getElementById('modal').style.display='flex';
+};
+
+function openEditModal(id){
+  const mod=modules[view].find(m=>m.id===id);if(!mod)return;
+  editingId=id;shapeSelected=new Set(mod.cells.map(([x,y])=>`${x},${y}`));
+  document.getElementById('modal-title').textContent='Modifier le module';
+  document.getElementById('f-name').value=mod.name;
+  document.getElementById('f-icon').value=mod.icon;
+  document.getElementById('f-color').value=mod.color;
+  document.getElementById('f-view').value=view;
+  document.getElementById('f-desc').value=mod.desc;
+  document.getElementById('del-mod-btn').style.display='block';
+  buildShapeGrid();
+  document.getElementById('shape-info').textContent=`${shapeSelected.size} case${shapeSelected.size>1?'s':''} sélectionnée${shapeSelected.size>1?'s':''}`;
+  document.getElementById('modal').style.display='flex';
+}
+
+window.saveModule=function(){
+  const name=document.getElementById('f-name').value.trim();
+  const icon=document.getElementById('f-icon').value.trim()||'📦';
+  const color=document.getElementById('f-color').value;
+  const targetView=document.getElementById('f-view').value;
+  const desc=document.getElementById('f-desc').value.trim();
+  if(!name||shapeSelected.size===0)return;
+  const cellsArr=[...shapeSelected].map(k=>k.split(',').map(Number));
+  const minX=Math.min(...cellsArr.map(c=>c[0])),minY=Math.min(...cellsArr.map(c=>c[1]));
+  const normCells=cellsArr.map(([x,y])=>[x-minX,y-minY]);
+  if(editingId){
+    const idx=modules[targetView].findIndex(m=>m.id===editingId);
+    if(idx>=0)modules[targetView][idx]={...modules[targetView][idx],name,icon,color,desc,cells:normCells};
+  }else{
+    modules[targetView].push({id:'custom_'+Date.now(),name,icon,color,desc,cells:normCells});
+  }
+  scheduleSave();closeModal();render();
+};
+
+window.deleteModule=function(){
+  if(!editingId)return;
+  modules[view]=modules[view].filter(m=>m.id!==editingId);
+  delete placements[view][editingId];
+  if(sel===editingId)sel=null;
+  scheduleSave();closeModal();render();renderPanel(null);
+};
+
+window.closeModal=function(){document.getElementById('modal').style.display='none';};
+
+document.addEventListener('dragover',e=>e.preventDefault());
+switchView('exterior');
+</script>
+</body>
+</html>
