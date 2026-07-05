@@ -435,7 +435,7 @@ function renderPalette(){
     if(!placed)item.addEventListener('dragstart',e=>{drag={id:mod.id};e.dataTransfer.effectAllowed='move';});
     const rot=S[view].r[mod.id]||0,cs=cells(mod,rot);
     const w=Math.max(...cs.map(c=>c[0]))+1,h=Math.max(...cs.map(c=>c[1]))+1;
-    item.innerHTML=`<div class="p-icon" style="background:${mod.color}28">${mod.icon}</div><div class="p-info"><div class="p-name">${mod.name}${placed?' ✓':''}</div><div class="p-size">${w}x${h} ${cs.length}c</div></div><div class="p-btns"><div class="rot-btn">↻</div><div class="mod-btn">✎</div></div>`;
+    item.innerHTML=`<div class="p-icon" style="background:${mod.color}28">${mod.icon}</div><div class="p-info"><div class="p-name">${mod.name}${placed?' ✓':''}</div><div class="p-size">${w}x${h} · ${cs.length} case${cs.length>1?'s':''}</div></div><div class="p-btns"><div class="rot-btn">↻</div><div class="mod-btn">✎</div></div>`;
     item.querySelector('.rot-btn').addEventListener('click',e=>{e.stopPropagation();S[view].r[mod.id]=((S[view].r[mod.id]||0)+1)%4;save(view);render();});
     item.querySelector('.mod-btn').addEventListener('click',e=>{e.stopPropagation();openEditModal(mod.id);});
     pal.appendChild(item);
